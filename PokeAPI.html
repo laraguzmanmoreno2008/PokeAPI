@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pokédex - Dashboard Pokémon</title>
+  <link rel="stylesheet" href="PokeAPI.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <div class="hero-banner">
+      <div class="hero-content">
+        <h1 class="pokemon-logo">Pokémon</h1>
+      </div>
+    </div>
+
+    <div class="main-layout">
+
+      <aside class="sidebar">
+        <div class="user-profile">
+          <div class="user"><img src="img/Sin título.png" width="100" height="100"></div>
+          <div class="user-info">
+            <span class="user-name">ENTRENADOR</span>
+            <span class="user-level">Level 1</span>
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <form class="sidebar-form" onsubmit="return false;">
+          <div class="form-group">
+            <label for="searchInput">Buscar Pokémon:</label>
+            <input type="text" id="searchInput" placeholder="Ej: pikachu, charizard...">
+            <input type="button" value="Buscar" onclick="buscarPokemon()">
+          </div>
+
+          <div class="form-group">
+            <label for="typeFilter">Filtrar por tipo:</label>
+            <select id="typeFilter" onchange="filtrarPorTipo()">
+              <option value="">Todos los tipos</option>
+              <option value="normal">Normal</option>
+              <option value="fire">Fuego</option>
+              <option value="water">Agua</option>
+              <option value="electric">Eléctrico</option>
+              <option value="grass">Planta</option>
+              <option value="ice">Hielo</option>
+              <option value="fighting">Lucha</option>
+              <option value="poison">Veneno</option>
+              <option value="ground">Tierra</option>
+              <option value="flying">Volador</option>
+              <option value="psychic">Psíquico</option>
+              <option value="bug">Bicho</option>
+              <option value="rock">Roca</option>
+              <option value="ghost">Fantasma</option>
+              <option value="dragon">Dragón</option>
+              <option value="dark">Siniestro</option>
+              <option value="steel">Acero</option>
+              <option value="fairy">Hada</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <input type="button" value="🎲 Aleatorio" class="btn-mint" onclick="cargarAleatorio()">
+            <input type="button" value="🔄 Restablecer Lista" class="btn-alt" onclick="cargarPokemonIniciales()">
+          </div>
+        </form>
+      </aside>
+
+      <main class="content-area">
+        <div class="content-header">
+          <h2>POKÉMON</h2>
+          <span class="pokemon-count" id="countLabel">Cargando...</span>
+        </div>
+
+        <div id="resultado"></div>
+      </main>
+
+    </div>
+  </div>
+
+  <script>
+    let todosLosPokemon = [];
+
+    async function cargarPokemonIniciales() {
+      let contenedor = document.getElementById("resultado");
+      let countLabel = document.getElementById("countLabel");
+      contenedor.innerHTML = '<div class="mensaje">Cargando Pokédex completa...</div>';
+
+      try {
+        let respuestaBase = await fetch("https://pokeapi.co/api/v2/pokemon?limit=151");
+        let datosBase = await respuestaBase.json();
+        let listaUrl = datosBase.results;
+
+        todosLosPokemon = [];
+
+        for (let i = 0; i < listaUrl.length; i++) {
+          let res = await fetch(listaUrl[i].url);
+          let pokemonData = await res.json();
+          todosLosPokemon.push(pokemonData);
+        }
+
+        countLabel.innerHTML = todosLosPokemon.length + " / 151";
+        mostrarPokemon(todosLosPokemon);
+      } catch (error) {
+        contenedor.innerHTML = '<div class="error">Error al cargar la lista completa de Pokémon.</div>';
+      }
+    }
+
+    async function buscarPokemon() {
+      let nombre = document.getElementById("searchInput").value.toLowerCase().trim();
+      let contenedor = document.getElementById("resultado");
+
+      if (nombre === "") {
+        alert("Por favor escribe el nombre de un Pokémon.");
+        return;
+      }
+
+      contenedor.innerHTML = '<div class="mensaje">Buscando en la PokeAPI...</div>';
+
+      try {
+        let respuesta = await fetch("https://pokeapi.co/api/v2/pokemon/" + nombre);
+
+        if (!respuesta.ok) {
+          contenedor.innerHTML = '<div class="error">No se encontró el Pokémon "' + nombre + '".</div>';
+          return;
+        }
+
+        let datos = await respuesta.json();
+        document.getElementById("countLabel").innerHTML = "1 resultado";
+        mostrarPokemon([datos]);
+      } catch (error) {
+        contenedor.innerHTML = '<div class="error">Error al conectarse a la API.</div>';
+      }
+    }
+
+    async function cargarAleatorio() {
+      let contenedor = document.getElementById("resultado");
+      contenedor.innerHTML = '<div class="mensaje">Cargando aleatorio...</div>';
+
+      let numeroAleatorio = Math.floor(Math.random() * 1010) + 1;
+
+      try {
+        let respuesta = await fetch("https://pokeapi.co/api/v2/pokemon/" + numeroAleatorio);
+        let datos = await respuesta.json();
+
+        document.getElementById("countLabel").innerHTML = "1 resultado";
+        mostrarPokemon([datos]);
+        document.getElementById("searchInput").value = datos.name;
+      } catch (error) {
+        contenedor.innerHTML = '<div class="error">Error al obtener Pokémon aleatorio.</div>';
+      }
+    }
+
+    function filtrarPorTipo() {
+      let tipo = document.getElementById("typeFilter").value;
+
+      if (tipo === "") {
+        document.getElementById("countLabel").innerHTML = todosLosPokemon.length + " / 151";
+        mostrarPokemon(todosLosPokemon);
+        return;
+      }
+
+      let filtrados = [];
+
+      for (let i = 0; i < todosLosPokemon.length; i++) {
+        let tieneTipo = false;
+
+        for (let j = 0; j < todosLosPokemon[i].types.length; j++) {
+          if (todosLosPokemon[i].types[j].type.name === tipo) {
+            tieneTipo = true;
+          }
+        }
+
+        if (tieneTipo) {
+          filtrados.push(todosLosPokemon[i]);
+        }
+      }
+
+      document.getElementById("countLabel").innerHTML = filtrados.length + " Pokémon de tipo " + tipo;
+
+      if (filtrados.length === 0) {
+        document.getElementById("resultado").innerHTML = '<div class="mensaje">No hay Pokémon de tipo "' + tipo + '" en la Pokédex.</div>';
+      } else {
+        mostrarPokemon(filtrados);
+      }
+    }
+
+    function mostrarPokemon(lista) {
+      let contenedor = document.getElementById("resultado");
+
+      if (lista.length === 0) {
+        contenedor.innerHTML = '<div class="mensaje">No se encontraron resultados.</div>';
+        return;
+      }
+
+      let html = '<div class="pokemon-grid">';
+
+      for (let i = 0; i < lista.length; i++) {
+        let p = lista[i];
+        let imagen = p.sprites.other["official-artwork"].front_default || p.sprites.front_default;
+        
+        let tiposHtml = "";
+        for (let t = 0; t < p.types.length; t++) {
+          let nombreTipo = p.types[t].type.name;
+          tiposHtml += '<span class="type-badge type-' + nombreTipo + '">' + nombreTipo + '</span>';
+        }
+
+        let hp = 0, ataque = 0, defensa = 0;
+        for (let s = 0; s < p.stats.length; s++) {
+          if (p.stats[s].stat.name === "hp") hp = p.stats[s].base_stat;
+          if (p.stats[s].stat.name === "attack") ataque = p.stats[s].base_stat;
+          if (p.stats[s].stat.name === "defense") defensa = p.stats[s].base_stat;
+        }
+
+        html += '<div class="card-pokemon">' +
+                  '<div class="cp-label">' + hp + ' CP</div>' +
+                  '<img class="pokemon-img" src="' + imagen + '" alt="' + p.name + '">' +
+                  '<div class="pokemon-name">' + p.name + '</div>' +
+                  '<div class="types-container">' + tiposHtml + '</div>' +
+                  '<div class="stats-box">' +
+                    '<div><span>Ataque</span> <strong>' + ataque + '</strong></div>' +
+                    '<div><span>Defensa</span> <strong>' + defensa + '</strong></div>' +
+                  '</div>' +
+                '</div>';
+      }
+
+      html += '</div>';
+      contenedor.innerHTML = html;
+    }
+
+    cargarPokemonIniciales();
+  </script>
+
+</body>
+</html>
